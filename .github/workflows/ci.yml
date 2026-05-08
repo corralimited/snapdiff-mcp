@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Codegen drift check
+        # Regenerate openapi-types.ts from the @corralimited/snapdiff-openapi
+        # package and fail if it differs from what's committed.
+        run: |
+          pnpm codegen
+          git diff --exit-code src/openapi-types.ts \
+            || (echo "::error::src/openapi-types.ts is stale. Run 'pnpm codegen' and commit."; exit 1)
+
+      - run: pnpm build

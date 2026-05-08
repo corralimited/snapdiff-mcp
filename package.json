@@ -1,0 +1,79 @@
+{
+  "name": "@corralimited/snapdiff-mcp",
+  "version": "0.1.0",
+  "description": "Standalone MCP server for SnapDiff. Exposes visual-diff, screenshot capture, change detection, and HTML-to-image tools to local agents (Claude Code, Cursor, Cline, Zed, Continue, ...) over stdio or streamable HTTP. Hits the public SnapDiff REST API; bring your own SNAPDIFF_API_KEY.",
+  "license": "MIT",
+  "homepage": "https://snapdiff.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/corralimited/snapdiff-mcp.git"
+  },
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "snapdiff-mcp": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./tools": {
+      "types": "./dist/tools/index.d.ts",
+      "import": "./dist/tools/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "codegen": "openapi-typescript node_modules/@corralimited/snapdiff-openapi/openapi.json -o src/openapi-types.ts",
+    "prepublishOnly": "pnpm clean && pnpm codegen && pnpm build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@corralimited/snapdiff-openapi": "^0.1.0",
+    "openapi-fetch": "^0.17.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "^5.7.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "snapdiff",
+    "visual-regression",
+    "visual-testing",
+    "screenshot",
+    "diff",
+    "agent-tools",
+    "claude",
+    "cursor"
+  ],
+  "pnpm": {
+    "overrides": {
+      "@corralimited/snapdiff-openapi": "link:../snapdiff/packages/snapdiff-openapi"
+    }
+  }
+}
