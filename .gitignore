@@ -1,6 +1,7 @@
 node_modules/
 dist/
 pnpm-lock.yaml
+src/openapi-types.ts
 *.log
 .DS_Store
 .pnpm-store/

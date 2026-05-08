@@ -1,15 +1,7 @@
-/**
- * Streamable HTTP transport for the standalone SnapDiff MCP server.
- *
- * Most users want stdio — every popular agent client (Claude Code, Cursor,
- * Cline, Zed, Continue) launches MCP servers over stdio. HTTP is for hosting
- * an MCP gateway behind your own infrastructure.
- *
- * Sessions are process-local. Run a single replica or put a sticky load
- * balancer (keyed on `mcp-session-id`) in front of multiple replicas — the
- * transport holds an open SSE stream that can't be migrated between processes.
- */
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+// Sticky sessions are required for >1 replica: the transport holds an open
+// SSE stream keyed on `mcp-session-id` that can't be migrated between
+// processes. Either keep replicas at 1 or set up session affinity on the LB.
+import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createMcpServer } from './server.js';
@@ -59,11 +51,14 @@ export async function startHttpServer(options: StartHttpServerOptions): Promise<
     }
 
     if (req.method !== 'POST') {
-      send(res, 400, {
-        jsonrpc: '2.0',
-        error: { code: -32002, message: 'Invalid or missing session. Send a POST first.' },
-        id: null,
-      });
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          error: { code: -32002, message: 'Invalid or missing session. Send a POST first.' },
+          id: null,
+        }),
+      );
       return;
     }
 
@@ -84,9 +79,4 @@ export async function startHttpServer(options: StartHttpServerOptions): Promise<
 
   await new Promise<void>((resolve) => server.listen(options.port, options.host, resolve));
   console.error(`snapdiff-mcp listening on http://${options.host}:${options.port}/mcp`);
-}
-
-function send(res: ServerResponse<IncomingMessage>, status: number, body: unknown): void {
-  res.writeHead(status, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify(body));
 }

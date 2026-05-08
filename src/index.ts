@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createMcpServer } from './server.js';
-import { createClientFromEnv } from './client.js';
+import { createClient } from './client.js';
 
 interface CliOptions {
   http: boolean;
@@ -31,15 +31,7 @@ function parseArgs(argv: string[]): CliOptions {
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-
-  // Fail fast on missing API key — better than waiting for the first tool call.
-  let client;
-  try {
-    client = createClientFromEnv();
-  } catch (err) {
-    console.error(err instanceof Error ? err.message : String(err));
-    process.exit(1);
-  }
+  const client = createClient();
 
   if (opts.http) {
     const { startHttpServer } = await import('./http.js');
@@ -48,11 +40,10 @@ async function main() {
   }
 
   const server = createMcpServer({ client });
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  await server.connect(new StdioServerTransport());
 }
 
 main().catch((err) => {
-  console.error('snapdiff-mcp failed to start:', err);
+  console.error(err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

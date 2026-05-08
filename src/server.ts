@@ -4,29 +4,14 @@ import type { SnapdiffClient } from './client.js';
 
 export interface CreateMcpServerOptions {
   client: SnapdiffClient;
-  /**
-   * Override agent-facing tool descriptions at registration time without forking the package.
-   * Keys are tool names from `tools/index.ts` (e.g. "snapdiff_compare_pages").
-   */
-  descriptionOverrides?: Partial<Record<string, string>>;
-  serverName?: string;
-  serverVersion?: string;
 }
 
-export function createMcpServer(options: CreateMcpServerOptions): McpServer {
-  const { client, descriptionOverrides = {} } = options;
-
-  const server = new McpServer({
-    name: options.serverName ?? 'snapdiff',
-    version: options.serverVersion ?? '0.1.0',
-  });
-
-  const desc = (toolName: string, fallback: string): string =>
-    descriptionOverrides[toolName] ?? fallback;
+export function createMcpServer({ client }: CreateMcpServerOptions): McpServer {
+  const server = new McpServer({ name: 'snapdiff', version: '0.1.0' });
 
   server.tool(
     tools.comparePages.name,
-    desc(tools.comparePages.name, tools.comparePages.description),
+    tools.comparePages.description,
     tools.comparePages.inputSchema,
     async (args: tools.comparePages.Input) => {
       const screenshotOptions = args.full_page ? { full_page: true } : undefined;
@@ -88,7 +73,7 @@ export function createMcpServer(options: CreateMcpServerOptions): McpServer {
 
   server.tool(
     tools.captureScreenshot.name,
-    desc(tools.captureScreenshot.name, tools.captureScreenshot.description),
+    tools.captureScreenshot.description,
     tools.captureScreenshot.inputSchema,
     async (args: tools.captureScreenshot.Input) => {
       const { data, error, response } = await client.POST('/screenshot', {
@@ -113,7 +98,7 @@ export function createMcpServer(options: CreateMcpServerOptions): McpServer {
   // Composed: /screenshot then /diff. The public /diff accepts ss_xxx ids.
   server.tool(
     tools.checkChanged.name,
-    desc(tools.checkChanged.name, tools.checkChanged.description),
+    tools.checkChanged.description,
     tools.checkChanged.inputSchema,
     async (args: tools.checkChanged.Input) => {
       const threshold = args.threshold ?? 1.0;
@@ -136,7 +121,7 @@ export function createMcpServer(options: CreateMcpServerOptions): McpServer {
 
   server.tool(
     tools.htmlToImage.name,
-    desc(tools.htmlToImage.name, tools.htmlToImage.description),
+    tools.htmlToImage.description,
     tools.htmlToImage.inputSchema,
     async (args: tools.htmlToImage.Input) => {
       const fullHtml = args.css
