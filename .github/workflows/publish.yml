@@ -23,6 +23,7 @@ jobs:
           node-version: 22
           cache: pnpm
           registry-url: 'https://registry.npmjs.org'
+          scope: '@corralimited'
 
       - run: pnpm install --no-frozen-lockfile
 
@@ -39,6 +40,7 @@ jobs:
 
       - run: pnpm build
 
-      - run: pnpm publish --provenance --no-git-checks
+      # No --provenance: requires public source repo. Add back at cutover.
+      - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
