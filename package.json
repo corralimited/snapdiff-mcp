@@ -61,10 +61,5 @@
     "agent-tools",
     "claude",
     "cursor"
-  ],
-  "pnpm": {
-    "overrides": {
-      "@corralimited/snapdiff-openapi": "link:../snapdiff/packages/snapdiff-openapi"
-    }
-  }
+  ]
 }
