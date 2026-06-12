@@ -1,9 +1,8 @@
 # @corralimited/snapdiff-mcp
 
-Standalone Model Context Protocol server for [SnapDiff](https://snapdiff.ai). Gives local AI
-agents the ability to:
+Standalone MCP server for [SnapDiff](https://snapdiff.ai). Exposes four tools to local agents:
 
-- **Compare two web pages visually** and get back a diff percentage plus a highlighted diff image
+- **Compare two web pages visually** — diff percentage plus a highlighted diff image
 - **Capture a screenshot** of any URL
 - **Check whether a page changed** vs. a previous capture
 - **Render HTML/CSS to an image** (OG cards, social images, email headers)
@@ -113,7 +112,7 @@ env:     SNAPDIFF_API_KEY=sk_live_...
 
 | Name                          | Purpose                                                                                                                                                                                                                                                                                                                                  |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `snapdiff_verify_ui_change`   | Opinionated verdict for agent self-verification: did the change match intent? Returns `verdict` (`pass` / `expected_change_detected` / `unexpected_regression` / `no_change_detected` / `needs_human_review`) and a `next_action` the agent can act on. Requires a project + baseline. **Primary tool for the agent verification loop.** |
+| `snapdiff_verify_ui_change`   | Checks whether a visual change matches the agent's stated intent. Returns `verdict` (`pass` / `expected_change_detected` / `unexpected_regression` / `no_change_detected` / `needs_human_review`) and a `next_action`. Requires a project + baseline. **Use this in the verification loop.** |
 | `snapdiff_compare_pages`      | Raw visual diff between two URLs, or a URL vs. a stored project baseline. Use for ad-hoc diffs that don't fit the verify-ui-change verdict shape.                                                                                                                                                                                        |
 | `snapdiff_capture_screenshot` | Single screenshot of a URL.                                                                                                                                                                                                                                                                                                              |
 | `snapdiff_html_to_image`      | Render HTML/CSS to an image (OG cards, social images, email headers).                                                                                                                                                                                                                                                                    |
