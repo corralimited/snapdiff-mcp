@@ -1,9 +1,9 @@
 {
   "name": "@corralimited/snapdiff-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Standalone MCP server for SnapDiff. Exposes visual-diff, screenshot capture, change detection, and HTML-to-image tools to local agents (Claude Code, Cursor, Cline, Zed, Continue, ...) over stdio or streamable HTTP. Hits the public SnapDiff REST API; bring your own SNAPDIFF_API_KEY.",
   "license": "MIT",
-  "homepage": "https://snapdiff.dev",
+  "homepage": "https://snapdiff.ai",
   "repository": {
     "type": "git",
     "url": "https://github.com/corralimited/snapdiff-mcp.git"
@@ -38,11 +38,11 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@corralimited/snapdiff-openapi": "^0.1.0",
     "openapi-fetch": "^0.17.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@corralimited/snapdiff-openapi": "^0.2.0",
     "@types/node": "^22.0.0",
     "openapi-typescript": "^7.13.0",
     "typescript": "^5.7.0"

@@ -11,5 +11,5 @@
  */
 export * as comparePages from './compare-pages.js';
 export * as captureScreenshot from './capture-screenshot.js';
-export * as checkChanged from './check-changed.js';
+export * as verifyUiChange from './verify-ui-change.js';
 export * as htmlToImage from './html-to-image.js';

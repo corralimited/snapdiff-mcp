@@ -1,6 +1,6 @@
 # @corralimited/snapdiff-mcp
 
-Standalone Model Context Protocol server for [SnapDiff](https://snapdiff.dev). Gives local AI
+Standalone Model Context Protocol server for [SnapDiff](https://snapdiff.ai). Gives local AI
 agents the ability to:
 
 - **Compare two web pages visually** and get back a diff percentage plus a highlighted diff image
@@ -8,13 +8,13 @@ agents the ability to:
 - **Check whether a page changed** vs. a previous capture
 - **Render HTML/CSS to an image** (OG cards, social images, email headers)
 
-Hits the public SnapDiff REST API. Bring your own [API key](https://snapdiff.dev/dashboard).
+Hits the public SnapDiff REST API. Bring your own [API key](https://snapdiff.ai/dashboard).
 
 ---
 
 ## Quickstart
 
-Get an API key at https://snapdiff.dev/dashboard, then drop the snippet for your agent below.
+Get an API key at https://snapdiff.ai/dashboard, then drop the snippet for your agent below.
 
 ### Claude Code
 
@@ -111,23 +111,23 @@ env:     SNAPDIFF_API_KEY=sk_live_...
 
 ## Tools
 
-| Name | Purpose |
-|---|---|
-| `snapdiff_compare_pages` | Visual diff between two URLs, or a URL vs. a stored project baseline. Primary tool. |
-| `snapdiff_capture_screenshot` | Single screenshot of a URL. |
-| `snapdiff_check_changed` | Quick changed/unchanged check vs. a previous screenshot. |
-| `snapdiff_html_to_image` | Render HTML/CSS to an image (OG cards, social images, email headers). |
+| Name                          | Purpose                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `snapdiff_verify_ui_change`   | Opinionated verdict for agent self-verification: did the change match intent? Returns `verdict` (`pass` / `expected_change_detected` / `unexpected_regression` / `no_change_detected` / `needs_human_review`) and a `next_action` the agent can act on. Requires a project + baseline. **Primary tool for the agent verification loop.** |
+| `snapdiff_compare_pages`      | Raw visual diff between two URLs, or a URL vs. a stored project baseline. Use for ad-hoc diffs that don't fit the verify-ui-change verdict shape.                                                                                                                                                                                        |
+| `snapdiff_capture_screenshot` | Single screenshot of a URL.                                                                                                                                                                                                                                                                                                              |
+| `snapdiff_html_to_image`      | Render HTML/CSS to an image (OG cards, social images, email headers).                                                                                                                                                                                                                                                                    |
 
 Schemas live in [`src/tools/`](./src/tools/) and are exported from `@corralimited/snapdiff-mcp/tools`.
 The hosted SnapDiff backend imports the same schemas so its in-process `/mcp` endpoint and this
 standalone stdio server expose an identical surface — agents see the same tool names, descriptions,
-and parameters whether they connect to `https://api.snapdiff.dev/mcp` or run this server locally.
+and parameters whether they connect to `https://api.snapdiff.ai/mcp` or run this server locally.
 
 ---
 
 ## HTTP transport (advanced)
 
-Most users want stdio — that's what every agent client expects. If you're hosting an MCP gateway
+Besides stdio, if you're hosting an MCP gateway
 and need a streamable HTTP server, run with `--http`:
 
 ```bash
@@ -140,18 +140,18 @@ Then point clients at `http://localhost:8787/mcp` with the standard MCP HTTP tra
 
 ## Configuration
 
-| Env var | Required | Notes |
-|---|---|---|
-| `SNAPDIFF_API_KEY` | yes | Get one at https://snapdiff.dev/dashboard |
-| `SNAPDIFF_API_URL` | no | Override the API base. Defaults to `https://api.snapdiff.dev/v1`. |
+| Env var            | Required | Notes                                                            |
+| ------------------ | -------- | ---------------------------------------------------------------- |
+| `SNAPDIFF_API_KEY` | yes      | Get one at https://snapdiff.ai/dashboard                         |
+| `SNAPDIFF_API_URL` | no       | Override the API base. Defaults to `https://api.snapdiff.ai/v1`. |
 
 CLI flags (HTTP mode only):
 
-| Flag | Default | Notes |
-|---|---|---|
-| `--http` | off | Run as a streamable HTTP server instead of stdio. |
-| `--port <n>` | `8787` | Port for `--http` mode. |
-| `--host <h>` | `127.0.0.1` | Bind address for `--http` mode. |
+| Flag         | Default     | Notes                                             |
+| ------------ | ----------- | ------------------------------------------------- |
+| `--http`     | off         | Run as a streamable HTTP server instead of stdio. |
+| `--port <n>` | `8787`      | Port for `--http` mode.                           |
+| `--host <h>` | `127.0.0.1` | Bind address for `--http` mode.                   |
 
 ---
 

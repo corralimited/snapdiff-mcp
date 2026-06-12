@@ -95,26 +95,45 @@ export function createMcpServer({ client }: CreateMcpServerOptions): McpServer {
     },
   );
 
-  // Composed: /screenshot then /diff. The public /diff accepts ss_xxx ids.
+  // The opinionated verdict tool. Hits the backend's /verifications
+  // endpoint which creates a persistent verification record, computes
+  // the verdict server-side, and returns a review_url the human can
+  // open to approve or reject. The verdict + intent + baseline live on
+  // the backend so the dashboard review page can render the same shape
+  // the agent saw.
   server.tool(
-    tools.checkChanged.name,
-    tools.checkChanged.description,
-    tools.checkChanged.inputSchema,
-    async (args: tools.checkChanged.Input) => {
-      const threshold = args.threshold ?? 1.0;
-
-      const capture = await client.POST('/screenshot', { body: { url: args.url } });
-      if (capture.error || !capture.data) return errorResult(capture.error, capture.response);
-
-      const diff = await client.POST('/diff', {
-        body: { before: args.baseline_id, after: capture.data.id },
+    tools.verifyUiChange.name,
+    tools.verifyUiChange.description,
+    tools.verifyUiChange.inputSchema,
+    async (args: tools.verifyUiChange.Input) => {
+      const { data, error, response } = await client.POST('/verifications', {
+        body: {
+          after: args.after,
+          project: args.project,
+          page_name: args.page_name,
+          branch: args.branch,
+          intent: args.intent,
+          intent_regions: args.intent_regions,
+          threshold: args.threshold,
+          match_tolerance_percent: args.match_tolerance_percent,
+          ignore_selectors: args.ignore_selectors,
+          full_page: args.full_page,
+        },
       });
-      if (diff.error || !diff.data) return errorResult(diff.error, diff.response);
+      if (error || !data) return errorResult(error, response);
 
       return jsonResult({
-        changed: diff.data.diff_percentage > threshold,
-        diff_percentage: diff.data.diff_percentage,
-        current_screenshot_id: capture.data.id,
+        verification_id: data.id,
+        verdict: data.verdict,
+        next_action: data.next_action,
+        reasoning: data.reasoning,
+        diff_percentage: data.diff_percentage,
+        diff_url: data.diff_image_url,
+        before_url: data.before_image_url,
+        after_url: data.after_image_url,
+        changed_regions: data.annotated_regions,
+        baseline: data.baseline,
+        review_url: data.review_url,
       });
     },
   );

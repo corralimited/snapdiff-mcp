@@ -20,8 +20,8 @@ function parseArgs(argv: string[]): CliOptions {
       console.log(
         'Usage: snapdiff-mcp [--http] [--port <n>] [--host <h>]\n\n' +
           'Env:\n' +
-          '  SNAPDIFF_API_KEY  required — get one at https://snapdiff.dev/dashboard\n' +
-          '  SNAPDIFF_API_URL  optional override (default: https://api.snapdiff.dev/v1)',
+          '  SNAPDIFF_API_KEY  required — get one at https://snapdiff.ai/dashboard\n' +
+          '  SNAPDIFF_API_URL  optional override (default: https://api.snapdiff.ai/v1)',
       );
       process.exit(0);
     }
