@@ -1,12 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import * as tools from './tools/index.js';
 import type { SnapdiffClient } from './client.js';
+import { isLocalUrl, captureAndUpload } from './local.js';
 
 export interface CreateMcpServerOptions {
   client: SnapdiffClient;
+  baseUrl: string;
+  apiKey: string;
 }
 
-export function createMcpServer({ client }: CreateMcpServerOptions): McpServer {
+export function createMcpServer({ client, baseUrl, apiKey }: CreateMcpServerOptions): McpServer {
   const server = new McpServer({ name: 'snapdiff', version: '0.1.0' });
 
   server.tool(
@@ -14,12 +17,30 @@ export function createMcpServer({ client }: CreateMcpServerOptions): McpServer {
     tools.comparePages.description,
     tools.comparePages.inputSchema,
     async (args: tools.comparePages.Input) => {
-      const screenshotOptions = args.full_page ? { full_page: true } : undefined;
+      const screenshotOptions = args.full_page ? { full_page: true as const } : undefined;
+      const captureOpts = { full_page: args.full_page };
+
+      // Pre-capture any local URLs in parallel — the diff endpoint accepts
+      // screenshot IDs (ss_xxx) but cannot reach localhost from the backend.
+      let after = args.after;
+      let before = args.before;
+      try {
+        const [afterResult, beforeResult] = await Promise.all([
+          isLocalUrl(args.after) ? captureAndUpload(args.after, captureOpts, baseUrl, apiKey) : null,
+          args.before && isLocalUrl(args.before)
+            ? captureAndUpload(args.before, captureOpts, baseUrl, apiKey)
+            : null,
+        ]);
+        if (afterResult) after = afterResult.upload.id;
+        if (beforeResult) before = beforeResult.upload.id;
+      } catch (err) {
+        return errorPayload(err instanceof Error ? err.message : String(err));
+      }
 
       if (args.project && args.page_name) {
         const { data, error, response } = await client.POST('/diff/baseline', {
           body: {
-            after: args.after,
+            after,
             project: args.project,
             page_name: args.page_name,
             branch: args.branch,
@@ -43,14 +64,14 @@ export function createMcpServer({ client }: CreateMcpServerOptions): McpServer {
         });
       }
 
-      if (!args.before) {
+      if (!before) {
         return errorPayload('Either `before` URL or `project` + `page_name` must be provided');
       }
 
       const { data, error, response } = await client.POST('/diff', {
         body: {
-          before: args.before,
-          after: args.after,
+          before,
+          after,
           threshold: args.threshold,
           ignore_selectors: args.ignore_selectors,
           screenshot_options: screenshotOptions,
@@ -76,6 +97,20 @@ export function createMcpServer({ client }: CreateMcpServerOptions): McpServer {
     tools.captureScreenshot.description,
     tools.captureScreenshot.inputSchema,
     async (args: tools.captureScreenshot.Input) => {
+      if (isLocalUrl(args.url)) {
+        try {
+          const result = await captureAndUpload(
+            args.url,
+            { full_page: args.full_page, width: args.width, selector: args.selector, dark_mode: args.dark_mode },
+            baseUrl,
+            apiKey,
+          );
+          return jsonResult({ id: result.upload.id, url: result.upload.url, width: result.upload.width, height: result.upload.height });
+        } catch (err) {
+          return errorPayload(err instanceof Error ? err.message : String(err));
+        }
+      }
+
       const { data, error, response } = await client.POST('/screenshot', {
         body: {
           url: args.url,
@@ -106,14 +141,36 @@ export function createMcpServer({ client }: CreateMcpServerOptions): McpServer {
     tools.verifyUiChange.description,
     tools.verifyUiChange.inputSchema,
     async (args: tools.verifyUiChange.Input) => {
+      let after = args.after;
+      let intentRegions = args.intent_regions;
+
+      if (isLocalUrl(args.after)) {
+        try {
+          const { upload, measuredRegions } = await captureAndUpload(
+            args.after,
+            { full_page: args.full_page },
+            baseUrl,
+            apiKey,
+            args.intent_regions,
+          );
+          after = upload.id;
+          // Replace selector-only regions with locally-measured bboxes so the
+          // server can do geometry matching even though `after` is now a
+          // screenshot ID rather than a fetchable URL.
+          if (measuredRegions?.length) intentRegions = measuredRegions;
+        } catch (err) {
+          return errorPayload(err instanceof Error ? err.message : String(err));
+        }
+      }
+
       const { data, error, response } = await client.POST('/verifications', {
         body: {
-          after: args.after,
+          after,
           project: args.project,
           page_name: args.page_name,
           branch: args.branch,
           intent: args.intent,
-          intent_regions: args.intent_regions,
+          intent_regions: intentRegions,
           threshold: args.threshold,
           match_tolerance_percent: args.match_tolerance_percent,
           ignore_selectors: args.ignore_selectors,

@@ -18,6 +18,8 @@ export interface StartHttpServerOptions {
   client: SnapdiffClient;
   port: number;
   host: string;
+  baseUrl: string;
+  apiKey: string;
 }
 
 export async function startHttpServer(options: StartHttpServerOptions): Promise<void> {
@@ -72,7 +74,7 @@ export async function startHttpServer(options: StartHttpServerOptions): Promise<
       },
     });
 
-    const mcp = createMcpServer({ client: options.client });
+    const mcp = createMcpServer({ client: options.client, baseUrl: options.baseUrl, apiKey: options.apiKey });
     await mcp.connect(transport);
     await transport.handleRequest(req, res);
   });

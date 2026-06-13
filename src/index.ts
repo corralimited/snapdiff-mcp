@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createMcpServer } from './server.js';
-import { createClient } from './client.js';
+import { createClient, getClientConfig } from './client.js';
 
 interface CliOptions {
   http: boolean;
@@ -31,15 +31,16 @@ function parseArgs(argv: string[]): CliOptions {
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  const client = createClient();
+  const { baseUrl, apiKey } = getClientConfig();
+  const client = createClient({ baseUrl, apiKey });
 
   if (opts.http) {
     const { startHttpServer } = await import('./http.js');
-    await startHttpServer({ client, port: opts.port, host: opts.host });
+    await startHttpServer({ client, baseUrl, apiKey, port: opts.port, host: opts.host });
     return;
   }
 
-  const server = createMcpServer({ client });
+  const server = createMcpServer({ client, baseUrl, apiKey });
   await server.connect(new StdioServerTransport());
 }
 
