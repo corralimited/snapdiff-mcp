@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import * as tools from './tools/index.js';
 import type { SnapdiffClient } from './client.js';
-import { isLocalUrl, captureAndUpload } from './local.js';
+import { isLocalUrl, captureAndUpload, captureMultipleAndUpload } from './local.js';
 
 export interface CreateMcpServerOptions {
   client: SnapdiffClient;
@@ -20,19 +20,25 @@ export function createMcpServer({ client, baseUrl, apiKey }: CreateMcpServerOpti
       const screenshotOptions = args.full_page ? { full_page: true as const } : undefined;
       const captureOpts = { full_page: args.full_page };
 
-      // Pre-capture any local URLs in parallel — the diff endpoint accepts
-      // screenshot IDs (ss_xxx) but cannot reach localhost from the backend.
+      // Pre-capture any local URLs — the diff endpoint accepts screenshot IDs
+      // (ss_xxx) but cannot reach localhost from the backend. When both sides
+      // are local, share a single browser to avoid paying two launch costs.
       let after = args.after;
       let before = args.before;
       try {
-        const [afterResult, beforeResult] = await Promise.all([
-          isLocalUrl(args.after) ? captureAndUpload(args.after, captureOpts, baseUrl, apiKey) : null,
-          args.before && isLocalUrl(args.before)
-            ? captureAndUpload(args.before, captureOpts, baseUrl, apiKey)
-            : null,
-        ]);
-        if (afterResult) after = afterResult.upload.id;
-        if (beforeResult) before = beforeResult.upload.id;
+        const afterIsLocal = isLocalUrl(args.after);
+        const beforeIsLocal = args.before != null && isLocalUrl(args.before);
+        if (afterIsLocal || beforeIsLocal) {
+          const specs = [
+            afterIsLocal ? { pageUrl: args.after, options: captureOpts } : null,
+            beforeIsLocal ? { pageUrl: args.before!, options: captureOpts } : null,
+          ];
+          const nonNull = specs.filter((s): s is NonNullable<typeof s> => s !== null);
+          const results = await captureMultipleAndUpload(nonNull, baseUrl, apiKey);
+          let ri = 0;
+          if (afterIsLocal) after = results[ri++].upload.id;
+          if (beforeIsLocal) before = results[ri++].upload.id;
+        }
       } catch (err) {
         return errorPayload(err instanceof Error ? err.message : String(err));
       }

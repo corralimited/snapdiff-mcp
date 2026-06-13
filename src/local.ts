@@ -34,26 +34,22 @@ export interface MeasuredRegion {
   label?: string;
 }
 
-export async function captureAndUpload(
+type SelectorSpec = { selector?: string; bbox?: [number, number, number, number]; label?: string };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function captureWithBrowser(
+  browser: any,
   pageUrl: string,
   options: LocalCaptureOptions,
   baseUrl: string,
   apiKey: string,
-  selectorsToMeasure?: Array<{ selector?: string; bbox?: [number, number, number, number]; label?: string }>,
+  selectorsToMeasure?: SelectorSpec[],
 ): Promise<{ upload: UploadResult; measuredRegions?: MeasuredRegion[] }> {
-  const playwright = await import('playwright').catch(() => {
-    throw new Error(
-      'Playwright is required for localhost screenshots. ' +
-        'Run: npm install playwright && npx playwright install chromium',
-    );
+  const context = await browser.newContext({
+    viewport: { width: options.width ?? 1280, height: 800 },
+    colorScheme: options.dark_mode ? 'dark' : 'light',
   });
-
-  const browser = await playwright.chromium.launch({ headless: true });
   try {
-    const context = await browser.newContext({
-      viewport: { width: options.width ?? 1280, height: 800 },
-      colorScheme: options.dark_mode ? 'dark' : 'light',
-    });
     const page = await context.newPage();
     await page.goto(pageUrl, { waitUntil: 'networkidle' });
 
@@ -69,27 +65,39 @@ export async function captureAndUpload(
     // screenshot ID rather than a fetchable URL.
     let measuredRegions: MeasuredRegion[] | undefined;
     if (selectorsToMeasure?.length) {
-      measuredRegions = [];
-      for (const region of selectorsToMeasure) {
-        if (region.bbox) {
-          // Already has a bbox — pass through unchanged.
-          measuredRegions.push({ bbox: region.bbox, label: region.label, selector: region.selector });
-          continue;
-        }
-        if (!region.selector) continue;
-        try {
-          const rect = await page.locator(region.selector).first().boundingBox();
-          if (rect) {
-            measuredRegions.push({
-              selector: region.selector,
-              label: region.label,
-              bbox: [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)],
-            });
+      const bboxPassthrough = selectorsToMeasure
+        .filter((r) => r.bbox)
+        .map((r) => ({ bbox: r.bbox!, label: r.label, selector: r.selector }));
+
+      const selectorBased = selectorsToMeasure.filter((r) => !r.bbox && r.selector);
+
+      const measured = await Promise.all(
+        selectorBased.map(async (region) => {
+          try {
+            const rect = await page.locator(region.selector!).first().boundingBox();
+            if (rect) {
+              return {
+                selector: region.selector,
+                label: region.label,
+                bbox: [
+                  Math.round(rect.x),
+                  Math.round(rect.y),
+                  Math.round(rect.width),
+                  Math.round(rect.height),
+                ] as [number, number, number, number],
+              };
+            }
+          } catch {
+            // Selector didn't match — omit so the server can surface it as unresolved.
           }
-        } catch {
-          // Selector didn't match — omit so the server can surface it as unresolved.
-        }
-      }
+          return null;
+        }),
+      );
+
+      measuredRegions = [
+        ...bboxPassthrough,
+        ...measured.filter((r): r is MeasuredRegion => r !== null),
+      ];
     }
 
     const params = new URLSearchParams({ source_url: pageUrl });
@@ -104,6 +112,60 @@ export async function captureAndUpload(
     }
     const upload = (await res.json()) as UploadResult;
     return { upload, measuredRegions };
+  } finally {
+    await context.close();
+  }
+}
+
+async function loadPlaywright() {
+  return import('playwright').catch(() => {
+    throw new Error(
+      'Playwright is required for localhost screenshots. ' +
+        'Run: npm install playwright && npx playwright install chromium',
+    );
+  });
+}
+
+export async function captureAndUpload(
+  pageUrl: string,
+  options: LocalCaptureOptions,
+  baseUrl: string,
+  apiKey: string,
+  selectorsToMeasure?: SelectorSpec[],
+): Promise<{ upload: UploadResult; measuredRegions?: MeasuredRegion[] }> {
+  const playwright = await loadPlaywright();
+  const browser = await playwright.chromium.launch({ headless: true });
+  try {
+    return await captureWithBrowser(browser, pageUrl, options, baseUrl, apiKey, selectorsToMeasure);
+  } finally {
+    await browser.close();
+  }
+}
+
+export interface MultiCaptureSpec {
+  pageUrl: string;
+  options: LocalCaptureOptions;
+  selectorsToMeasure?: SelectorSpec[];
+}
+
+/**
+ * Capture multiple local URLs sharing a single browser instance.
+ * All captures run in parallel on separate browser contexts.
+ */
+export async function captureMultipleAndUpload(
+  specs: MultiCaptureSpec[],
+  baseUrl: string,
+  apiKey: string,
+): Promise<Array<{ upload: UploadResult; measuredRegions?: MeasuredRegion[] }>> {
+  if (specs.length === 0) return [];
+  const playwright = await loadPlaywright();
+  const browser = await playwright.chromium.launch({ headless: true });
+  try {
+    return await Promise.all(
+      specs.map((spec) =>
+        captureWithBrowser(browser, spec.pageUrl, spec.options, baseUrl, apiKey, spec.selectorsToMeasure),
+      ),
+    );
   } finally {
     await browser.close();
   }
