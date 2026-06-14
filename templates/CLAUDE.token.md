@@ -11,7 +11,10 @@ Use when you're changing a CSS variable, design token, shared constant, or anyth
 
 ### When to call
 
-After the change is made, verify the full page list — not just the page you were working on. You don't know which components consumed the token visually until you look. Skipping pages is how cascading regressions ship.
+When you're asked to verify a token or shared-value change, verify the full page
+list — not just the page you were working on. You don't know which components
+consumed the token visually until you look; skipping pages is how cascading
+regressions ship.
 
 Call `snapdiff_verify_ui_change` for each page above, with:
 - `project`: the slug above
@@ -31,4 +34,4 @@ Each page needs its own call. Do not batch.
 
 ### Rule
 
-Every page in the full list must reach `proceed` or an acknowledged `request_human_review` before the task is done. A token change that looks clean on one page but breaks another is still a regression.
+Once you're verifying, every page in the full list must reach `proceed` or an acknowledged `request_human_review` before it's done. A token change that looks clean on one page but breaks another is still a regression.
