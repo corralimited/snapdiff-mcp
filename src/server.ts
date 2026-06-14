@@ -193,6 +193,69 @@ export function createMcpServer({ client, baseUrl, apiKey }: CreateMcpServerOpti
     },
   );
 
+  server.tool(
+    tools.checkBuild.name,
+    tools.checkBuild.description,
+    tools.checkBuild.inputSchema,
+    async (args: tools.checkBuild.Input) => {
+      const pageEntries: { name: string; url?: string; screenshot_id?: string }[] = [];
+
+      const localSpecs = args.pages
+        .map((p, i) => (isLocalUrl(p.url) ? { pageUrl: p.url, options: {}, _index: i } : null))
+        .filter((s): s is NonNullable<typeof s> => s !== null);
+
+      let uploadedIds: Map<number, string> = new Map();
+      if (localSpecs.length > 0) {
+        try {
+          const results = await captureMultipleAndUpload(localSpecs, baseUrl, apiKey);
+          for (let i = 0; i < localSpecs.length; i++) {
+            uploadedIds.set(localSpecs[i]._index, results[i].upload.id);
+          }
+        } catch (err) {
+          return errorPayload(err instanceof Error ? err.message : String(err));
+        }
+      }
+
+      for (let i = 0; i < args.pages.length; i++) {
+        const p = args.pages[i];
+        const screenshotId = uploadedIds.get(i);
+        pageEntries.push(screenshotId ? { name: p.page_name, screenshot_id: screenshotId } : { name: p.page_name, url: p.url });
+      }
+
+      const { data: build, error, response } = await client.POST('/projects/{projectId}/builds', {
+        params: { path: { projectId: args.project } },
+        body: { branch: args.branch, pages: pageEntries },
+      });
+      if (error || !build) return errorResult(error, response);
+
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const { data, error: pollError, response: pollRes } = await client.GET(
+          '/projects/{projectId}/builds/{buildId}',
+          { params: { path: { projectId: args.project, buildId: build.id } } },
+        );
+        if (pollError || !data) return errorResult(pollError, pollRes);
+        if (data.status === 'pending' || data.status === 'processing') continue;
+
+        const changed = data.snapshots.filter((s) => s.status === 'pending' || s.status === 'new');
+        const unchanged = data.snapshots.filter((s) => s.status !== 'pending' && s.status !== 'new');
+
+        return jsonResult({
+          build_id: data.id,
+          summary: changed.length === 0 ? 'all_pages_match' : 'pages_changed',
+          changed: changed.map((s) => ({ page_name: s.page_name, diff_percentage: s.diff_percentage })),
+          unchanged: unchanged.map((s) => s.page_name),
+          ...(changed.length > 0 && {
+            review_url: `https://snapdiff.ai/dashboard/projects/${args.project}/builds/${data.id}`,
+            message: `${changed.length} page(s) changed. Review before promoting the baseline.`,
+          }),
+        });
+      }
+
+      return errorPayload('Build timed out after 60 seconds. Check the dashboard for status.');
+    },
+  );
+
   // The opinionated verdict tool. Hits the backend's /verifications
   // endpoint which creates a persistent verification record, computes
   // the verdict server-side, and returns a review_url the human can
