@@ -9,7 +9,10 @@ Use when you're editing one specific UI element and scope bleed is not acceptabl
 
 ### When to call
 
-After all edits are done. One call per task. Pick the `intent_regions` selector before writing any code — it's the element the request named, not every element your edit happened to touch — and do not change it afterward regardless of what the diff shows.
+When you're asked to verify a change — this is not an automatic step you run on
+every edit. Make your edits, then run one verification for the route you touched.
+Match `intent_regions` to the element the request named — not every element your
+edit happened to touch — and don't widen it afterward to clear a diff.
 
 Call `snapdiff_verify_ui_change` with:
 - `project`: the slug above
@@ -27,4 +30,4 @@ Call `snapdiff_verify_ui_change` with:
 
 ### Rule
 
-Task is not complete unless `next_action` is `proceed`, or `request_human_review` with the `review_url` handed to a human. `rollback_and_retry` means revert, not retry with a looser region.
+Once you've run a verification, it isn't resolved until `next_action` is `proceed`, or `request_human_review` with the `review_url` handed to a human. `rollback_and_retry` means revert, not retry with a looser region.

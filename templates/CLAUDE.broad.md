@@ -11,7 +11,11 @@ Use when a change touches shared components, layout, or styles that could affect
 
 ### When to call
 
-Finish all edits first, then verify every page that could show the change — not just the file you edited. If a component renders on three routes, verify all three. When in doubt, verify it; a false-positive `request_human_review` is cheap, a missed regression isn't.
+When you're asked to verify a change that touched shared code — not on your own
+after every edit. Finish all edits first, then verify every page that could show
+the change, not just the file you edited. If a component renders on three routes,
+check all three; a false-positive `request_human_review` is cheap, a missed
+regression isn't.
 
 Call `snapdiff_verify_ui_change` once per affected page, with:
 - `project`: the slug above
@@ -31,4 +35,4 @@ All pages must pass before the task is complete.
 
 ### Rule
 
-Task is complete only when every page in the affected set has a `proceed` or a human-acknowledged `request_human_review`. Partial coverage is not done.
+Once you're verifying, every page in the affected set needs a `proceed` or a human-acknowledged `request_human_review` before it's done. Partial coverage is not done.
