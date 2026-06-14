@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "ai.snapdiff/mcp",
-  "description": "Screenshot, visual-diff, change-detection & HTML-to-image tools that catch agentic UI drift for coding agents.",
+  "description": "Visual-diff & change-detection tools that catch agentic UI drift for coding agents.",
   "repository": {
     "url": "https://github.com/corralimited/snapdiff-mcp",
     "source": "github"
   },
-  "version": "0.4.1",
+  "version": "0.4.2",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@corralimited/snapdiff-mcp",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "transport": {
         "type": "stdio"
       },
