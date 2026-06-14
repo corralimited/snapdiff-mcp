@@ -160,6 +160,8 @@ export function createMcpServer({ client, baseUrl, apiKey }: CreateMcpServerOpti
       });
       if (error || !build) return errorResult(error, response);
 
+      const buildUrl = build.build_url;
+
       for (let i = 0; i < 20; i++) {
         await new Promise((r) => setTimeout(r, 3000));
         const { data, error: pollError, response: pollRes } = await client.GET(
@@ -173,6 +175,7 @@ export function createMcpServer({ client, baseUrl, apiKey }: CreateMcpServerOpti
             status: 'baseline_captured',
             page_name: args.page_name,
             build_id: data.id,
+            build_url: buildUrl,
             message: `Baseline for "${args.page_name}" is in place. You can now call snapdiff_verify_ui_change against this page.`,
           });
         }
@@ -181,6 +184,7 @@ export function createMcpServer({ client, baseUrl, apiKey }: CreateMcpServerOpti
             status: 'existing_baseline_differs',
             page_name: args.page_name,
             build_id: data.id,
+            build_url: buildUrl,
             message: `A baseline already exists for "${args.page_name}" and your capture differs from it. Open the dashboard to approve the new capture or delete the existing baseline first.`,
           });
         }
