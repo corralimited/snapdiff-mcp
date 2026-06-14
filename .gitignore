@@ -5,3 +5,7 @@ src/openapi-types.ts
 *.log
 .DS_Store
 .pnpm-store/
+
+# MCP registry DNS-auth signing key — never commit
+*.pem
+key.pem

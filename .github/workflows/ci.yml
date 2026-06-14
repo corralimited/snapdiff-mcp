@@ -24,6 +24,20 @@ jobs:
 
       - run: pnpm install --no-frozen-lockfile
 
+      - name: server.json / package.json consistency
+        # The MCP Registry validates the npm package's `mcpName` against the
+        # server.json `name`, and rejects version mismatches. Catch drift in CI
+        # rather than at release time.
+        run: |
+          PKG_NAME=$(jq -r '.mcpName' package.json)
+          SRV_NAME=$(jq -r '.name' server.json)
+          PKG_VER=$(jq -r '.version' package.json)
+          SRV_VER=$(jq -r '.version' server.json)
+          SRV_PKG_VER=$(jq -r '.packages[0].version' server.json)
+          [ "$PKG_NAME" = "$SRV_NAME" ] || { echo "::error::package.json mcpName ($PKG_NAME) != server.json name ($SRV_NAME)"; exit 1; }
+          [ "$PKG_VER" = "$SRV_VER" ] || { echo "::error::package.json version ($PKG_VER) != server.json version ($SRV_VER)"; exit 1; }
+          [ "$PKG_VER" = "$SRV_PKG_VER" ] || { echo "::error::package.json version ($PKG_VER) != server.json packages[0].version ($SRV_PKG_VER)"; exit 1; }
+
       - name: Codegen drift check
         # Regenerate openapi-types.ts from the @corralimited/snapdiff-openapi
         # package and fail if it differs from what's committed.

@@ -43,3 +43,23 @@ jobs:
       - run: pnpm publish --provenance --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # --- Publish server metadata to the official MCP Registry ---
+      # Validates the just-published npm package against its `mcpName` field,
+      # so this must run after the npm publish above succeeds.
+
+      - name: Sync server.json version to tag
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          jq --arg v "$VERSION" '.version = $v | (.packages[].version) = $v' server.json > server.tmp
+          mv server.tmp server.json
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry (HTTP domain verification)
+        run: ./mcp-publisher login http --domain snapdiff.ai --private-key "${{ secrets.MCP_PRIVATE_KEY }}"
+
+      - name: Publish to MCP Registry
+        run: ./mcp-publisher publish
