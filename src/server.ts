@@ -136,6 +136,63 @@ export function createMcpServer({ client, baseUrl, apiKey }: CreateMcpServerOpti
     },
   );
 
+  server.tool(
+    tools.captureBaseline.name,
+    tools.captureBaseline.description,
+    tools.captureBaseline.inputSchema,
+    async (args: tools.captureBaseline.Input) => {
+      let pageEntry: { name: string; url?: string; screenshot_id?: string };
+
+      if (isLocalUrl(args.url)) {
+        try {
+          const { upload } = await captureAndUpload(args.url, {}, baseUrl, apiKey);
+          pageEntry = { name: args.page_name, screenshot_id: upload.id };
+        } catch (err) {
+          return errorPayload(err instanceof Error ? err.message : String(err));
+        }
+      } else {
+        pageEntry = { name: args.page_name, url: args.url };
+      }
+
+      const { data: build, error, response } = await client.POST('/projects/{projectId}/builds', {
+        params: { path: { projectId: args.project } },
+        body: { branch: args.branch, pages: [pageEntry] },
+      });
+      if (error || !build) return errorResult(error, response);
+
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const { data, error: pollError, response: pollRes } = await client.GET(
+          '/projects/{projectId}/builds/{buildId}',
+          { params: { path: { projectId: args.project, buildId: build.id } } },
+        );
+        if (pollError || !data) return errorResult(pollError, pollRes);
+
+        if (data.status === 'approved') {
+          return jsonResult({
+            status: 'baseline_captured',
+            page_name: args.page_name,
+            build_id: data.id,
+            message: `Baseline for "${args.page_name}" is in place. You can now call snapdiff_verify_ui_change against this page.`,
+          });
+        }
+        if (data.status === 'changes_requested') {
+          return jsonResult({
+            status: 'existing_baseline_differs',
+            page_name: args.page_name,
+            build_id: data.id,
+            message: `A baseline already exists for "${args.page_name}" and your capture differs from it. Open the dashboard to approve the new capture or delete the existing baseline first.`,
+          });
+        }
+        if (data.status === 'failed') {
+          return errorPayload(`Build failed — check that ${args.url} is reachable.`);
+        }
+      }
+
+      return errorPayload('Baseline capture timed out after 60 seconds. Check the dashboard for build status.');
+    },
+  );
+
   // The opinionated verdict tool. Hits the backend's /verifications
   // endpoint which creates a persistent verification record, computes
   // the verdict server-side, and returns a review_url the human can

@@ -1,6 +1,6 @@
 {
   "name": "@corralimited/snapdiff-mcp",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Standalone MCP server for SnapDiff. Exposes visual-diff, screenshot capture, change detection, and HTML-to-image tools to local agents (Claude Code, Cursor, Cline, Zed, Continue, ...) over stdio or streamable HTTP. Hits the public SnapDiff REST API; bring your own SNAPDIFF_API_KEY.",
   "license": "MIT",
   "homepage": "https://snapdiff.ai",

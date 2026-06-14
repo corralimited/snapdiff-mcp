@@ -96,8 +96,8 @@ async function captureWithBrowser(
 
       measuredRegions = [
         ...bboxPassthrough,
-        ...measured.filter((r): r is MeasuredRegion => r !== null),
-      ];
+        ...measured.filter((r) => r !== null),
+      ] as MeasuredRegion[];
     }
 
     const params = new URLSearchParams({ source_url: pageUrl });
