@@ -1,7 +1,14 @@
+import { readFileSync } from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import * as tools from './tools/index.js';
 import type { SnapdiffClient } from './client.js';
 import { isLocalUrl, captureAndUpload, captureMultipleAndUpload } from './local.js';
+
+// Read rather than import: package.json sits outside rootDir, so a static
+// import would put the compiled output under dist/src/ and move the bin.
+const { version } = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+) as { version: string };
 
 export interface CreateMcpServerOptions {
   client: SnapdiffClient;
@@ -10,7 +17,7 @@ export interface CreateMcpServerOptions {
 }
 
 export function createMcpServer({ client, baseUrl, apiKey }: CreateMcpServerOptions): McpServer {
-  const server = new McpServer({ name: 'snapdiff', version: '0.1.0' });
+  const server = new McpServer({ name: 'snapdiff', version });
 
   server.tool(
     tools.comparePages.name,
