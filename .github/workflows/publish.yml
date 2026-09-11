@@ -1,10 +1,12 @@
 name: Publish
 
+# Stages the release on npm. Once it's done, approve the staged version on
+# npmjs.com, then run the "Publish to MCP Registry" workflow.
+
 on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,9 +21,11 @@ jobs:
 
       - uses: pnpm/action-setup@v6
 
+      # Trusted publishing and `npm stage publish` need npm 11.15 or newer,
+      # which ships with Node 24 but not Node 22.
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
           scope: '@corralimited'
 
@@ -40,26 +44,10 @@ jobs:
 
       - run: pnpm build
 
-      - run: pnpm publish --provenance --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # No token: npm trusts this workflow through the trusted publisher set up
+      # on npmjs.com. The version can't be installed until someone approves it.
+      - run: npm stage publish --access public
 
-      # --- Publish server metadata to the official MCP Registry ---
-      # Validates the just-published npm package against its `mcpName` field,
-      # so this must run after the npm publish above succeeds.
-
-      - name: Sync server.json version to tag
+      - name: Next steps
         run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          jq --arg v "$VERSION" '.version = $v | (.packages[].version) = $v' server.json > server.tmp
-          mv server.tmp server.json
-
-      - name: Install mcp-publisher
-        run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
-
-      - name: Authenticate to MCP Registry (HTTP domain verification)
-        run: ./mcp-publisher login http --domain snapdiff.ai --private-key "${{ secrets.MCP_PRIVATE_KEY }}"
-
-      - name: Publish to MCP Registry
-        run: ./mcp-publisher publish
+          echo "Staged $GITHUB_REF_NAME on npm. Approve it under Staged Packages at https://www.npmjs.com/package/@corralimited/snapdiff-mcp, then run the Publish to MCP Registry workflow." >> "$GITHUB_STEP_SUMMARY"
