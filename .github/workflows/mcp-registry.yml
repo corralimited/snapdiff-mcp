@@ -1,0 +1,42 @@
+name: Publish to MCP Registry
+
+# Run by hand after the npm release is approved. The registry rejects a
+# version it can't find on npm, so this can't run straight after staging.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MCP_PUBLISHER_VERSION: 1.8.1
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check the version is live on npm
+        run: |
+          VERSION=$(jq -r .version package.json)
+          if ! npm view "@corralimited/snapdiff-mcp@$VERSION" version > /dev/null 2>&1; then
+            echo "::error::$VERSION isn't on npm yet. Approve the staged version on npmjs.com first."
+            exit 1
+          fi
+
+      - name: Install mcp-publisher
+        run: |
+          BASE="https://github.com/modelcontextprotocol/registry/releases/download/v$MCP_PUBLISHER_VERSION"
+          curl -fsSLO "$BASE/mcp-publisher_linux_amd64.tar.gz"
+          curl -fsSLO "$BASE/registry_${MCP_PUBLISHER_VERSION}_checksums.txt"
+          grep ' mcp-publisher_linux_amd64.tar.gz$' "registry_${MCP_PUBLISHER_VERSION}_checksums.txt" | sha256sum --check
+          tar xzf mcp-publisher_linux_amd64.tar.gz mcp-publisher
+
+      - name: Authenticate to MCP Registry (HTTP domain verification)
+        run: ./mcp-publisher login http --domain snapdiff.ai --private-key "${{ secrets.MCP_PRIVATE_KEY }}"
+
+      - name: Publish to MCP Registry
+        run: ./mcp-publisher publish

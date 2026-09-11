@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 22
 
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
       - name: server.json / package.json consistency
         # The MCP Registry validates the npm package's `mcpName` against the
