@@ -29,7 +29,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@corralimited'
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --no-frozen-lockfile
 
       - name: Verify tag matches package.json version
         run: |
