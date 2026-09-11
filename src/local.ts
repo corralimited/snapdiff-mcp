@@ -51,7 +51,15 @@ async function captureWithBrowser(
   });
   try {
     const page = await context.newPage();
-    await page.goto(pageUrl, { waitUntil: 'networkidle' });
+    // `networkidle` alone is unreliable on dev servers: an open HMR websocket
+    // (Vite/Next) or long-polling keeps it from ever firing, stalling to the
+    // default navigation timeout. Wait for `load` (a firm signal) with an
+    // explicit timeout, then a bounded best-effort `networkidle` so static
+    // pages still settle. Mirrors the backend capture path.
+    await page.goto(pageUrl, { waitUntil: 'load', timeout: 30_000 });
+    await page
+      .waitForLoadState('networkidle', { timeout: 5_000 })
+      .catch(() => undefined);
 
     let png: Buffer;
     if (options.selector) {

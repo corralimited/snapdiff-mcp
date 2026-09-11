@@ -124,16 +124,14 @@ and parameters whether they connect to `https://api.snapdiff.ai/mcp` or run this
 
 ---
 
-## HTTP transport (advanced)
+## Remote HTTP access
 
-Besides stdio, if you're hosting an MCP gateway
-and need a streamable HTTP server, run with `--http`:
+This package speaks **stdio only** — your editor spawns it as a subprocess, and the
+Playwright-backed localhost tools run on your machine, where your dev server actually
+is. It does not open a port.
 
-```bash
-SNAPDIFF_API_KEY=sk_live_... npx @corralimited/snapdiff-mcp --http --port 8787
-```
-
-Then point clients at `http://localhost:8787/mcp` with the standard MCP HTTP transport.
+If you need an HTTP endpoint, use the hosted one at `https://mcp.snapdiff.ai/mcp`,
+which authenticates every request with your API key and exposes the same tool surface.
 
 ---
 
@@ -144,13 +142,7 @@ Then point clients at `http://localhost:8787/mcp` with the standard MCP HTTP tra
 | `SNAPDIFF_API_KEY` | yes      | Get one at https://snapdiff.ai/dashboard                         |
 | `SNAPDIFF_API_URL` | no       | Override the API base. Defaults to `https://api.snapdiff.ai/v1`. |
 
-CLI flags (HTTP mode only):
-
-| Flag         | Default     | Notes                                             |
-| ------------ | ----------- | ------------------------------------------------- |
-| `--http`     | off         | Run as a streamable HTTP server instead of stdio. |
-| `--port <n>` | `8787`      | Port for `--http` mode.                           |
-| `--host <h>` | `127.0.0.1` | Bind address for `--http` mode.                   |
+There are no CLI flags beyond `--help`.
 
 ---
 
